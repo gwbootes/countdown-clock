@@ -6,29 +6,142 @@
   <title>countdown</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+
     body {
       background: #000;
       display: flex;
       align-items: center;
       justify-content: center;
       height: 100vh;
+      overflow: hidden;
       font-family: 'Arial Black', Arial, sans-serif;
       color: white;
     }
-    #clock { font-size: 8rem; font-weight: 900; }
+
+    /* Scanlines overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 2px,
+        rgba(0,0,0,0.15) 2px,
+        rgba(0,0,0,0.15) 4px
+      );
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    /* Noise/flicker overlay */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: -50%;
+      width: 200%;
+      height: 200%;
+      background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 9;
+      animation: noise 0.2s steps(2) infinite;
+    }
+
+    @keyframes noise {
+      0%   { transform: translate(0, 0); }
+      25%  { transform: translate(-2px, 1px); }
+      50%  { transform: translate(2px, -1px); }
+      75%  { transform: translate(-1px, 2px); }
+      100% { transform: translate(1px, -2px); }
+    }
+
+    /* Clock */
+    #clock {
+      font-size: 8rem;
+      font-weight: 900;
+      position: relative;
+      z-index: 20;
+      animation: flicker 6s infinite;
+    }
+
+    /* RGB split glitch on the text */
+    #clock::before,
+    #clock::after {
+      content: attr(data-text);
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+    }
+    #clock::before {
+      color: #f00;
+      animation: glitch-r 3s infinite;
+      clip-path: polygon(0 30%, 100% 30%, 100% 50%, 0 50%);
+    }
+    #clock::after {
+      color: #0ff;
+      animation: glitch-b 3s infinite;
+      clip-path: polygon(0 55%, 100% 55%, 100% 70%, 0 70%);
+    }
+
+    @keyframes glitch-r {
+      0%, 90%, 100% { transform: translate(0); opacity: 0; }
+      91%            { transform: translate(-3px, 1px); opacity: 1; }
+      93%            { transform: translate(3px, -1px); opacity: 1; }
+      95%            { transform: translate(-2px, 0); opacity: 1; }
+      97%            { transform: translate(0); opacity: 0; }
+    }
+
+    @keyframes glitch-b {
+      0%, 88%, 100% { transform: translate(0); opacity: 0; }
+      89%            { transform: translate(3px, -1px); opacity: 1; }
+      91%            { transform: translate(-3px, 1px); opacity: 1; }
+      93%            { transform: translate(2px, 0); opacity: 1; }
+      95%            { transform: translate(0); opacity: 0; }
+    }
+
+    @keyframes flicker {
+      0%, 97%, 100% { opacity: 1; }
+      98%            { opacity: 0.4; }
+      99%            { opacity: 1; }
+      99.5%          { opacity: 0.7; }
+    }
+
+    /* Horizontal glitch scan */
+    .glitch-bar {
+      position: fixed;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: rgba(255,255,255,0.08);
+      z-index: 15;
+      animation: scanbar 8s linear infinite;
+    }
+
+    @keyframes scanbar {
+      0%   { top: -5px; }
+      100% { top: 100vh; }
+    }
   </style>
 </head>
 <body>
-  <div id="clock">60:00</div>
+  <div class="glitch-bar"></div>
+  <div id="clock" data-text="60:00">60:00</div>
+
   <script>
     let total = 3600;
+    const el = document.getElementById('clock');
+
     function tick() {
       total--;
       if (total < 0) total = 3600;
       const mins = Math.floor(total / 60).toString().padStart(2, '0');
       const secs = (total % 60).toString().padStart(2, '0');
-      document.getElementById('clock').textContent = `${mins}:${secs}`;
+      const val = `${mins}:${secs}`;
+      el.textContent = val;
+      el.setAttribute('data-text', val);
     }
+
     setInterval(tick, 1000);
   </script>
 </body>
