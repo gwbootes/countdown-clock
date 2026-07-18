@@ -36,14 +36,18 @@
       font-weight: 900;
       letter-spacing: 0.05em;
       position: fixed;
-      top: 2rem;
+      top: 50%;
       left: 50%;
-      transform: translateX(-50%);
+      transform: translate(-50%, -50%);
       white-space: nowrap;
       z-index: 5;
       filter: url('#vhs');
       animation: flicker 5s infinite;
+      cursor: pointer;
+      user-select: none;
     }
+
+    #clock:active { transform: translate(-50%, -50%) scale(0.97); }
 
     @keyframes flicker {
       0%, 95%, 100% { opacity: 1; }
@@ -52,36 +56,18 @@
       98%  { opacity: 0.7; }
     }
 
-    #clicker {
+    /* Full-screen Jeopardy reveal (hidden until the clock is clicked) */
+    #game-frame {
       position: fixed;
-      bottom: 25rem;
-      left: 50%;
-      transform: translateX(-50%);
-      text-align: center;
-      cursor: pointer;
-      z-index: 5;
-      user-select: none;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      z-index: 20;
+      display: none;
+      background: #000;
     }
-
-    #vhs-tape {
-      display: block;
-      margin: 0 auto;
-      transition: transform 0.1s ease;
-      filter: drop-shadow(0 0 8px rgba(255, 100, 0, 0.4));
-    }
-
-    #vhs-tape:active {
-      transform: scale(0.88);
-    }
-
-    #vhs-count {
-      margin-top: 0.75rem;
-      font-size: 1rem;
-      font-weight: 900;
-      letter-spacing: 0.1em;
-      color: #ff6600;
-      text-transform: uppercase;
-    }
+    #game-frame.show { display: block; }
 
     /* Hidden filter SVG only */
     svg.filter-svg { position: absolute; width: 0; height: 0; }
@@ -166,53 +152,34 @@
     </defs>
   </svg>
 
-  <div id="clock">24:00:00</div>
+  <div id="clock">10:00</div>
 
-  <div id="clicker">
-    <svg id="vhs-tape" width="120" height="84" viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg">
-      <!-- Outer shell -->
-      <rect x="2" y="10" width="96" height="55" rx="4" fill="#1a1a1a" stroke="#555" stroke-width="2"/>
-      <!-- Top bump -->
-      <rect x="10" y="2" width="80" height="12" rx="3" fill="#2a2a2a" stroke="#555" stroke-width="1.5"/>
-      <!-- Tape window -->
-      <rect x="14" y="28" width="72" height="28" rx="3" fill="#0a0a0a" stroke="#444" stroke-width="1.5"/>
-      <!-- Left spool -->
-      <circle cx="32" cy="42" r="10" fill="#2a2a2a" stroke="#555" stroke-width="1.5"/>
-      <circle cx="32" cy="42" r="5" fill="#111"/>
-      <circle cx="32" cy="42" r="2" fill="#666"/>
-      <!-- Right spool -->
-      <circle cx="68" cy="42" r="10" fill="#2a2a2a" stroke="#555" stroke-width="1.5"/>
-      <circle cx="68" cy="42" r="5" fill="#111"/>
-      <circle cx="68" cy="42" r="2" fill="#666"/>
-      <!-- Label strip -->
-      <rect x="14" y="14" width="72" height="12" rx="2" fill="#cc3300"/>
-      <text x="50" y="23" text-anchor="middle" fill="white" font-family="Arial Black" font-size="7" font-weight="900">VHS</text>
-    </svg>
-    <div id="vhs-count">VHS tapes collected: 0</div>
-  </div>
+  <iframe id="game-frame" title="Jeopardy"></iframe>
 
   <script>
-    let total = 86400;
+    const GAME_URL = 'https://gwbootes.github.io/sidd-jeopardy/';
+
+    let total = 600;                       // 10 minutes
     const el = document.getElementById('clock');
 
-    function tick() {
-      total--;
-      if (total < 0) total = 86400;
-      const hrs  = Math.floor(total / 3600).toString().padStart(2, '0');
-      const mins = Math.floor((total % 3600) / 60).toString().padStart(2, '0');
+    function render() {
+      const mins = Math.floor(total / 60).toString().padStart(2, '0');
       const secs = (total % 60).toString().padStart(2, '0');
-      el.textContent = `${hrs}:${mins}:${secs}`;
+      el.textContent = `${mins}:${secs}`;
     }
 
-    setInterval(tick, 1000);
+    const timer = setInterval(() => {
+      if (total > 0) { total--; render(); }
+      else { clearInterval(timer); }       // freeze on 00:00
+    }, 1000);
 
-    let tapes = 0;
-    const tape = document.getElementById('vhs-tape');
-    const count = document.getElementById('vhs-count');
+    render();
 
-    tape.addEventListener('click', () => {
-      tapes++;
-      count.textContent = `VHS tapes collected: ${tapes}`;
+    // The clock is clickable at any point — counting or frozen — and reveals the game.
+    const frame = document.getElementById('game-frame');
+    el.addEventListener('click', () => {
+      if (!frame.src) frame.src = GAME_URL; // lazy-load so it doesn't autostart
+      frame.classList.add('show');
     });
   </script>
 </body>
